@@ -45,19 +45,79 @@ class Company {
   }
 
   /** Find all companies.
-   *
+   * @param { name, minEmployees, maxEmployees } filters -> An obj that contains up to three filters for the query
+   * 
    * Returns [{ handle, name, description, numEmployees, logoUrl }, ...]
+   * 
    * */
 
-  static async findAll() {
+  static async findAll(filters={}) {
+    // Get the keys of the filters argument
+    const filterKeys = Object.keys(filters);
+
+    // Check for valid filters
+    const validFilters = filterKeys.filter(f => f == 'name' || f == 'minEmployees' || f == 'maxEmployees');
+
+    // Check to see if there are no vaild filters
+    if(validFilters.length == 0) {
+      // Do the regular query
+      const companiesRes = await db.query(
+        `SELECT handle,
+                name,
+                description,
+                num_employees AS "numEmployees",
+                logo_url AS "logoUrl"
+         FROM companies
+         ORDER BY name`);
+      return companiesRes.rows;
+    }
+
+    // Construct an obj with the valid filters
+    let validFiltersObj = {};
+    for (let filter of validFilters) {
+      // Setting the validFilters keys to the correct values from the filters obj
+      // { validKey1: filters.validKey1 }
+      validFiltersObj[filter] = filters[filter];
+    }
+
+    // Construct filter query
+    let filterQueries = [];
+
+    // Check for name filter
+    if(validFiltersObj.hasOwnProperty('name')) {
+      filterQueries.push(`name ILIKE '%${validFiltersObj['name']}%'`);
+    }
+
+    // Check for minEmployees filter
+    if(validFiltersObj.hasOwnProperty('minEmployees')) {
+      filterQueries.push(`num_employees >= ${validFiltersObj['minEmployees']}`);
+    }
+
+    // Check for maxEmployees filter
+    if(validFiltersObj.hasOwnProperty('maxEmployees')) {
+      filterQueries.push(`num_employees <= ${validFiltersObj['maxEmployees']}`);
+    }
+
+    // Final query
+    let filterQuery = '';
+
+    // Join all queries if more than one
+    if(filterQueries.length > 1) {
+      filterQuery = filterQueries.join(' AND ');
+    } else {
+      filterQuery = filterQueries[0];
+    }
+
     const companiesRes = await db.query(
-          `SELECT handle,
-                  name,
-                  description,
-                  num_employees AS "numEmployees",
-                  logo_url AS "logoUrl"
-           FROM companies
-           ORDER BY name`);
+      `SELECT handle,
+              name,
+              description,
+              num_employees AS "numEmployees",
+              logo_url AS "logoUrl"
+      FROM companies
+      WHERE ${filterQuery}
+      ORDER BY name`
+    );
     return companiesRes.rows;
   }
 
