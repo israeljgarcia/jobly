@@ -117,7 +117,10 @@ describe("POST /users/:id/jobs/:jobId", function () {
     const jobs = await Job.findAll();
     const jobId = jobs[0].id;
     const resp = await request(app)
-    .post("/users/u1/jobs/")
+    .post(`/users/u1/jobs/${jobId}`)
+    .set("authorization", `Bearer ${u1Token}`);
+    expect(resp.statusCode).toEqual(201);
+    expect(resp.body).toEqual({ applied: jobId });
   })
 })
 

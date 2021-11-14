@@ -43,9 +43,9 @@ router.post("/", ensureLoggedIn, ensureAdmin, async function (req, res, next) {
   }
 });
 
-router.post("/:id/jobs/:jobId", ensureLoggedIn, async function (req, res, next) {
+router.post("/:username/jobs/:jobId", ensureAdminOrAuthUser, async function (req, res, next) {
   try {
-    const user = await User.apply(req.params.id, req.params.jobId);
+    const user = await User.apply(req.params.username, req.params.jobId);
 
     return res.status(201).json({ applied: user.jobId });
   } catch (err) {
@@ -61,7 +61,7 @@ router.post("/:id/jobs/:jobId", ensureLoggedIn, async function (req, res, next) 
  * Authorization required: login
  **/
 
-router.get("/", ensureLoggedIn, ensureAdmin, async function (req, res, next) {
+router.get("/", ensureAdmin, async function (req, res, next) {
   try {
     const users = await User.findAll();
     return res.json({ users });
@@ -78,7 +78,7 @@ router.get("/", ensureLoggedIn, ensureAdmin, async function (req, res, next) {
  * Authorization required: login
  **/
 
-router.get("/:username", ensureLoggedIn, ensureAdminOrAuthUser, async function (req, res, next) {
+router.get("/:username", async function (req, res, next) {
   try {
     const user = await User.get(req.params.username);
     return res.json({ user });

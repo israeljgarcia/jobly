@@ -7,6 +7,8 @@ const {
 } = require("../expressError");
 const db = require("../db.js");
 const User = require("./user.js");
+const Job = require("../models/job");
+
 const {
   commonBeforeAll,
   commonBeforeEach,
@@ -104,6 +106,15 @@ describe("register", function () {
     }
   });
 });
+
+describe("apply", function () {
+  test("works", async function () {
+    const jobs = await Job.findAll();
+    const jobId = jobs[0].id;
+    const application = await User.apply("u1", jobId);
+    expect(application).toEqual({ jobId });
+  });
+})
 
 /************************************** findAll */
 

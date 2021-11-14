@@ -98,7 +98,7 @@ class User {
 
   /** Find all users.
    *
-   * Returns [{ username, first_name, last_name, email, is_admin }, ...]
+   * Returns [{ username, first_name, last_name, email, is_admin, jobs: [jobId, jobId, ...] }, ...]
    **/
 
   static async findAll() {
@@ -124,18 +124,23 @@ class User {
    **/
 
   static async get(username) {
-    const userRes = await db.query(
-          `SELECT username,
-                  first_name AS "firstName",
-                  last_name AS "lastName",
-                  email,
-                  is_admin AS "isAdmin"
-           FROM users
-           WHERE username = $1`,
+    const result = await db.query(
+      `SELECT u.username,
+              u.first_name AS "firstName",
+              u.last_name AS "lastName",
+              u.email,
+              u.is_admin AS "isAdmin",
+              a.job_id AS "jobId"
+       FROM users AS u
+       JOIN applications AS a ON u.username = a.username
+       WHERE u.username=$1`,
         [username],
     );
 
-    const user = userRes.rows[0];
+
+    const { description, firstName, lastName, email, isAdmin } = result.rows[0];
+    const jobs = result.rows.map(j => (j.jobId));
+    const user = { username, description, firstName, lastName, email, isAdmin, jobs };
 
     if (!user) throw new NotFoundError(`No user: ${username}`);
 
@@ -205,12 +210,12 @@ class User {
     if (!user) throw new NotFoundError(`No user: ${username}`);
   }
 
-  static async apply(userId, jobId) {
+  static async apply(username, jobId) {
     let result = await db.query(
       `INSERT INTO applications (username, job_id)
       VALUES($1, $2)
-      RETURNING job_id AS jobId`,
-      [userId, jobId]
+      RETURNING job_id AS "jobId"`,
+      [username, jobId]
     );
 
     return result.rows[0];
