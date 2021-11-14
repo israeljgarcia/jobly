@@ -55,6 +55,7 @@ router.get("/", async function (req, res, next) {
     // Get filters from query
     const filters = req.query;
     const companies = await Company.findAll(filters);
+    console.log(companies);
     return res.json({ companies });
   } catch (err) {
     return next(err);

@@ -43,6 +43,16 @@ router.post("/", ensureLoggedIn, ensureAdmin, async function (req, res, next) {
   }
 });
 
+router.post("/:id/jobs/:jobId", ensureLoggedIn, async function (req, res, next) {
+  try {
+    const user = await User.apply(req.params.id, req.params.jobId);
+
+    return res.status(201).json({ applied: user.jobId });
+  } catch (err) {
+    return next(err);
+  }
+})
+
 
 /** GET / => { users: [ {username, firstName, lastName, email }, ... ] }
  *
@@ -117,6 +127,5 @@ router.delete("/:username", ensureLoggedIn, ensureAdminOrAuthUser, async functio
     return next(err);
   }
 });
-
 
 module.exports = router;

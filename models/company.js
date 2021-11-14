@@ -2,6 +2,7 @@
 
 const db = require("../db");
 const { BadRequestError, NotFoundError } = require("../expressError");
+const { constructValidFilters, getValidFilters, constructFilterQuery } = require("../helpers/filter");
 const { sqlForPartialUpdate } = require("../helpers/sql");
 
 /** Related functions for companies. */
@@ -52,14 +53,10 @@ class Company {
    * */
 
   static async findAll(filters={}) {
-    // Get the keys of the filters argument
-    const filterKeys = Object.keys(filters);
-
-    // Check for valid filters
-    const validFilters = filterKeys.filter(f => f == 'name' || f == 'minEmployees' || f == 'maxEmployees');
+    const validFilters = getValidFilters(filters, ['name', 'minEmployees', 'maxEmployees']);
 
     // Check to see if there are no vaild filters
-    if(validFilters.length == 0) {
+    if(Object.keys(validFilters).length == 0) {
       // Do the regular query
       const companiesRes = await db.query(
         `SELECT handle,
@@ -72,41 +69,13 @@ class Company {
       return companiesRes.rows;
     }
 
-    // Construct an obj with the valid filters
-    let validFiltersObj = {};
-    for (let filter of validFilters) {
-      // Setting the validFilters keys to the correct values from the filters obj
-      // { validKey1: filters.validKey1 }
-      validFiltersObj[filter] = filters[filter];
-    }
+    const filterQuery = constructFilterQuery([
+      "name ILIKE '%_QUERY_%'", 
+      "num_employees >= _QUERY_", 
+      "num_employees <= _QUERY_"
+    ], ['name', 'minEmployees', 'maxEmployees'], validFilters);
 
-    // Construct filter query
-    let filterQueries = [];
-
-    // Check for name filter
-    if(validFiltersObj.hasOwnProperty('name')) {
-      filterQueries.push(`name ILIKE '%${validFiltersObj['name']}%'`);
-    }
-
-    // Check for minEmployees filter
-    if(validFiltersObj.hasOwnProperty('minEmployees')) {
-      filterQueries.push(`num_employees >= ${validFiltersObj['minEmployees']}`);
-    }
-
-    // Check for maxEmployees filter
-    if(validFiltersObj.hasOwnProperty('maxEmployees')) {
-      filterQueries.push(`num_employees <= ${validFiltersObj['maxEmployees']}`);
-    }
-
-    // Final query
-    let filterQuery = '';
-
-    // Join all queries if more than one
-    if(filterQueries.length > 1) {
-      filterQuery = filterQueries.join(' AND ');
-    } else {
-      filterQuery = filterQueries[0];
-    }
+    console.log(Object.values(validFilters));
 
     const companiesRes = await db.query(
       `SELECT handle,
@@ -116,7 +85,8 @@ class Company {
               logo_url AS "logoUrl"
       FROM companies
       WHERE ${filterQuery}
-      ORDER BY name`
+      ORDER BY name`,
+      [Object.values(validFilters)]
     );
     return companiesRes.rows;
   }
@@ -131,16 +101,31 @@ class Company {
 
   static async get(handle) {
     const companyRes = await db.query(
-          `SELECT handle,
-                  name,
-                  description,
-                  num_employees AS "numEmployees",
-                  logo_url AS "logoUrl"
-           FROM companies
+          `SELECT c.handle,
+                  c.name,
+                  c.description,
+                  c.num_employees AS "numEmployees",
+                  c.logo_url AS "logoUrl",
+                  j.id,
+                  j.title,
+                  j.salary,
+                  j.equity
+           FROM companies AS c
+           JOIN jobs AS j ON c.handle = j.company_handle
            WHERE handle = $1`,
         [handle]);
 
-    const company = companyRes.rows[0];
+    const jobs = companyRes.rows.map(c => (
+       {
+         id: c.id,
+         title: c.title,
+         salary: c.salary,
+         equity: c.equity
+       } 
+      ));
+
+    const { name, description, numEmployees, logoUrl } = companyRes.rows[0];
+    const company = { handle, name, description, numEmployees, logoUrl, jobs };
 
     if (!company) throw new NotFoundError(`No company: ${handle}`);
 

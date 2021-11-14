@@ -5,6 +5,7 @@ const request = require("supertest");
 const db = require("../db.js");
 const app = require("../app");
 const User = require("../models/user");
+const Job = require("../models/job");
 
 const {
   commonBeforeAll,
@@ -110,6 +111,15 @@ describe("POST /users", function () {
     expect(resp.statusCode).toEqual(400);
   });
 });
+
+describe("POST /users/:id/jobs/:jobId", function () {
+  test("works for users", async function () {
+    const jobs = await Job.findAll();
+    const jobId = jobs[0].id;
+    const resp = await request(app)
+    .post("/users/u1/jobs/")
+  })
+})
 
 /************************************** GET /users */
 
